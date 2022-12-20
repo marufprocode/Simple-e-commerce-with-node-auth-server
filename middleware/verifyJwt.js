@@ -15,7 +15,7 @@ function verifyJwt (req, res, next) {
   // users token, let's verify
     const token = userJwtToken.split(' ')[1];  // we received token with Bearer, so split and get only token
   // for varification JWT gives us a built in function like-
-      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded){
+      jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded){
       if(err) {
         return res.status(401).send({
           success: false,
