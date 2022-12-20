@@ -25,6 +25,7 @@ async function run () {
 
 const usersCollection = client.db(`${process.env.DB_USER}`).collection('users');
 const productsCollection = client.db(`${process.env.DB_USER}`).collection('products');
+const cartCollection = client.db(`${process.env.DB_USER}`).collection('cart');
 
 app.post("/jwt", async (req, res) => {
     try {
@@ -44,6 +45,7 @@ app.post("/jwt", async (req, res) => {
 
 app.post ('/create-user', async (req, res) => {
     try{
+        
         const isExist = await usersCollection.findOne({email:req.body.email});
         if (isExist){
             res.send({
@@ -123,6 +125,74 @@ app.get('/products', async (req, res) => {
             success:true,
             products: result
         })
+    }catch(error){
+        console.log(error.name, error.message);
+        res.send({
+            success:false,
+            error: error.message
+        })
+    }
+})
+
+app.put('/addto-cart', verifyJwt, async (req, res) => {
+    try{
+        if(req.query.email !== req.decoded.email){
+            res.status(401).send({
+                success:false,
+                message:"Unauthorized Access"
+            }) 
+            return;
+        }
+        const product = req.body;
+        const isExits = await cartCollection.findOne({buyerEmail:product.buyerEmail, name:product.name});
+        if(isExits){
+            const updateOne = await cartCollection.updateOne({buyerEmail:product.buyerEmail, name:product.name}, {$set:{quantity:isExits.quantity+1}}, {upsert:true})
+            if(updateOne.modifiedCount){
+                res.send({
+                    success:true,
+                    message:"Successfully Added to The Cart"
+                })
+            }
+        }else{
+            const result = await cartCollection.insertOne(product)
+            if(result.insertedId){
+                res.send({
+                    success:true,
+                    message:"Successfully Added to The Cart"
+                })
+            }
+        }
+    }catch(error){
+        console.log(error.name, error.message);
+        res.send({
+            success:false,
+            error: error.message
+        })
+    }
+})
+app.get('/cart-items', verifyJwt, async (req, res) => {
+    try{
+        if(req.query.email !== req.decoded.email){
+            res.status(401).send({
+                success:false,
+                message:"Unauthorized Access"
+            }) 
+            return;
+        }
+        const result = await cartCollection.find({buyerEmail:req.query.email}).toArray();
+        if(result.length){
+            res.send({
+                success:true,
+                cartItems:result
+            })
+        } else{
+            res.send({
+                success:false,
+                message:"No Cart Items Found with this user",
+                cartItems:[]
+            })
+        }
+
     }catch(error){
         console.log(error.name, error.message);
         res.send({
