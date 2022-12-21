@@ -5,7 +5,7 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 const verifyJwt = require('./middleware/verifyJwt');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware 
 app.use(express.json());
@@ -153,6 +153,7 @@ app.put('/addto-cart', verifyJwt, async (req, res) => {
                     message:"Successfully Added to The Cart"
                 })
             }
+            
         }else{
             const result = await cartCollection.insertOne(product)
             if(result.insertedId){
@@ -170,6 +171,56 @@ app.put('/addto-cart', verifyJwt, async (req, res) => {
         })
     }
 })
+
+app.delete('/delete-cart', verifyJwt, async (req, res) => {
+    try{
+        if(req.query.email !== req.decoded.email){
+            res.status(401).send({
+                success:false,
+                message:"Unauthorized Access"
+            }) 
+            return;
+        }
+        const result = await cartCollection.deleteMany({buyerEmail:req.query.email})
+        if(result.deletedCount){
+            res.send({
+                success:true,
+                message:"Successfully Deleted All Cart Items",
+            })
+        }
+    }catch(error){
+        console.log(error.name, error.message);
+        res.send({
+            success:false,
+            error: error.message
+        })
+    }
+})
+app.delete('/delete-cart-item', verifyJwt, async (req, res) => {
+    try{
+        if(req.query.email !== req.decoded.email){
+            res.status(401).send({
+                success:false,
+                message:"Unauthorized Access"
+            }) 
+            return;
+        }
+        const result = await cartCollection.deleteOne({_id:ObjectId(req.query.id)})
+        if(result.deletedCount){
+            res.send({
+                success:true,
+                message:"Successfully Deleted the Item"
+            })
+        }
+    }catch(error){
+        console.log(error.name, error.message);
+        res.send({
+            success:false,
+            error: error.message
+        })
+    }
+})
+
 app.get('/cart-items', verifyJwt, async (req, res) => {
     try{
         if(req.query.email !== req.decoded.email){
